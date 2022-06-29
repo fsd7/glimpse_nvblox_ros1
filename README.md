@@ -1,3 +1,7 @@
+# RSL Fork of Nvblox
+
+This fork of Nvblox is different then the original repository. The **nvblox_ros**, **nvblox_rviz_plugin** and **nvblox_msgs** packages are adapted to use ROS-1. Furthermore, the functionalities of Nvblox are tuned for Mesh generation operations only. To efficiently manage the vRAM autosaving is added and multiple utility adaptaions were done to accomodate multi-camera setup. Similarly, the rviz_plugin is also adapted for on-the-go visualization.
+
 # Isaac ROS Nvblox (Preview)
 
 Nvblox is a package for building a 3D reconstruction of the environment around your robot from sensor observations in real-time. The reconstruction is intended to be used by path planners to generate collision-free paths. Under the hood, nvblox uses NVIDIA CUDA to accelerate this task to allow operation at real-time rates. This repository contains ROS2 integration for the [nvblox core library](https://github.com/nvidia-isaac/nvblox).
