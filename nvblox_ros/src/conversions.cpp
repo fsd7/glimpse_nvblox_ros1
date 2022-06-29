@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "nvblox_ros/conversions.hpp"
-
+#include <sensor_msgs/image_encodings.h>
 namespace nvblox
 {
 
@@ -23,35 +23,42 @@ RosConverter::RosConverter() {cudaStreamCreate(&cuda_stream_);}
 
 // Convert camera info message to NVBlox camera object
 Camera RosConverter::cameraFromMessage(
-  const sensor_msgs::msg::CameraInfo & camera_info)
+  const sensor_msgs::CameraInfo & camera_info)
 {
-  Camera camera(camera_info.k[0], camera_info.k[4], camera_info.k[2],
-    camera_info.k[5], camera_info.width, camera_info.height);
+  Camera camera(camera_info.K[0], camera_info.K[4], camera_info.K[2],
+    camera_info.K[5], camera_info.width, camera_info.height);
   return camera;
 }
 
 // Convert image to depth frame object
 bool RosConverter::colorImageFromImageMessage(
-  const sensor_msgs::msg::Image::ConstSharedPtr & image_msg,
+  const sensor_msgs::ImageConstPtr & image_msg,
   ColorImage * color_image)
 {
   CHECK_NOTNULL(color_image);
 
-  // First check if we actually have a valid image here.
-  if (image_msg->encoding != "rgb8") {
+  sensor_msgs::ImageConstPtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "rgb8",  cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8)->image).toImageMsg();
+
+  //bgrImage = cv_ptr->image;
+  //if (image_msg->encoding == "bgr8"){
+  //  cv::cvtColor(bgrImage, rgbImage, cv::COLOR_BGR2RGB);
+  //}
+  
+  if ( (image_msg->encoding != "rgb8") && (image_msg->encoding != "bgr8")) {
+    
     return false;
   }
 
   color_image->populateFromBuffer(
     image_msg->height, image_msg->width,
-    reinterpret_cast<const Color *>(&image_msg->data[0]), MemoryType::kDevice);
+    reinterpret_cast<const Color *>(&imgMsg->data[0]), MemoryType::kDevice); // &image_msg->data[0]
 
   return true;
 }
 
 void RosConverter::imageMessageFromDepthImage(
   const DepthImage & depth_image, const std::string & frame_id,
-  sensor_msgs::msg::Image * image_msg)
+  sensor_msgs::Image * image_msg)
 {
   CHECK_NOTNULL(image_msg);
   size_t image_size =
@@ -71,7 +78,7 @@ void RosConverter::imageMessageFromDepthImage(
 }
 
 void RosConverter::meshMessageFromMeshLayer(
-  const BlockLayer<MeshBlock> & mesh_layer, nvblox_msgs::msg::Mesh * mesh_msg)
+  const BlockLayer<MeshBlock> & mesh_layer, nvblox_msgs::Mesh * mesh_msg)
 {
   std::vector<Index3D> block_indices = mesh_layer.getAllBlockIndices();
   meshMessageFromMeshBlocks(mesh_layer, block_indices, mesh_msg);
@@ -80,7 +87,7 @@ void RosConverter::meshMessageFromMeshLayer(
 void RosConverter::meshMessageFromMeshBlocks(
   const BlockLayer<MeshBlock> & mesh_layer,
   const std::vector<Index3D> & block_indices,
-  nvblox_msgs::msg::Mesh * mesh_msg)
+  nvblox_msgs::Mesh * mesh_msg)
 {
   // Go through all the blocks, converting each individual one.
   mesh_msg->block_size = mesh_layer.block_size();
@@ -97,6 +104,10 @@ void RosConverter::meshMessageFromMeshBlocks(
       continue;
     }
 
+    if (block_indices[i].z() > maxHeight_) {
+      continue;
+    }
+
     // Convert the actual block.
     meshBlockMessageFromMeshBlock(*mesh_block, &mesh_msg->blocks[i]);
   }
@@ -104,7 +115,7 @@ void RosConverter::meshMessageFromMeshBlocks(
 
 void RosConverter::distanceMapSliceFromLayer(
   const EsdfLayer & layer, float z_slice_level,
-  nvblox_msgs::msg::DistanceMapSlice * map_slice)
+  nvblox_msgs::DistanceMapSlice * map_slice)
 {
   CHECK_NOTNULL(map_slice);
 

@@ -15,14 +15,23 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
+#include <message_filters/time_synchronizer.h>
 
-#include <libstatistics_collector/topic_statistics_collector/topic_statistics_collector.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <std_msgs/msg/string.hpp>
-#include <std_srvs/srv/empty.hpp>
+#include <nvblox/nvblox.h>
 #include <tf2_eigen/tf2_eigen.h>
+
+#include <ros/ros.h>
+#include <ros/time.h>
+#include <ros/node_handle.h>
+#include <ros/publisher.h>
+#include <ros/service_server.h>
+
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/Image.h>
+#include <std_msgs/String.h>
+#include <std_srvs/Empty.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <chrono>
 #include <deque>
@@ -31,85 +40,110 @@
 #include <string>
 #include <utility>
 
-#include <nvblox/nvblox.h>
-
 #include "nvblox_ros/conversions.hpp"
 #include "nvblox_ros/transformer.hpp"
 
 namespace nvblox
 {
 
-class NvbloxNode : public rclcpp::Node
+class NvbloxNode
 {
 public:
-  NvbloxNode();
-  virtual ~NvbloxNode() = default;
+  NvbloxNode(ros::NodeHandle& nodeHandle);
+
+  // Setup the ros communication
+  void setupRosCommunication();
+
+  // Read mapping parameters
+  bool readMappingParameters();
+
+  // Read parameters
+  bool readParameters();
 
   // Callback functions. These just stick images in a queue.
   void depthImageCallback(
-    const sensor_msgs::msg::Image::ConstSharedPtr & depth_img_ptr,
-    const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
+    const sensor_msgs::ImageConstPtr & depth_img_ptr,
+    const sensor_msgs::CameraInfoConstPtr & camera_info_msg);
   void colorImageCallback(
-    const sensor_msgs::msg::Image::ConstSharedPtr & color_img_ptr,
-    const sensor_msgs::msg::CameraInfo::ConstSharedPtr & color_info_msg);
+    const sensor_msgs::ImageConstPtr & color_img_ptr,
+    const sensor_msgs::CameraInfoConstPtr & color_info_msg);
 
-  void savePly(
-    const std::shared_ptr<std_srvs::srv::Empty::Request> request,
-    std::shared_ptr<std_srvs::srv::Empty::Response> response);
+  bool savePly(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   // Does whatever processing there is to be done, depending on what
   // transforms are available.
   void processDepthQueue();
   void processColorQueue();
 
-  // Process a single images
-  virtual bool processDepthImage(
-    sensor_msgs::msg::Image::ConstSharedPtr & depth_img_ptr,
-    sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
-  virtual bool processColorImage(
-    sensor_msgs::msg::Image::ConstSharedPtr & color_img_ptr,
-    sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
+  // Alternative callbacks to using TF.
+  void transformCallback(const geometry_msgs::TransformStampedConstPtr& transform_msg);
+  void poseCallback(const geometry_msgs::PoseStampedConstPtr& transform_msg);
+
+  // Check memory status on GPU and save/purge data if necessary.
+  void memoryTimerCallback(const ros::TimerEvent& event);
+
+  // Timer for checking the available memory
+  ros::Timer memoryTimer_;
+
+  // Storage of the available memory after the previous save. 
+  int freeMemoryAfterLastSave{0};
+
+  // Map saving counter. We are naming accordingly.
+  unsigned int mapSaveCounter_{1u};
 
 private:
   // Helper functions to make the code more readable.
-  void updateEsdf(const rclcpp::Time & timestamp);
-  void updateMesh(const rclcpp::Time & timestamp);
+  void updateEsdf(const ros::Time & timestamp);
+  void updateMesh(const ros::Time & timestamp);
+
+  // A copied function from nvblox utilities. Gets the free memory in GPU.
+  std::pair<int, float> getFreeGPUMemory();
 
   // ROS publishers and subscribers
 
   // Transformer to handle... everything, let's be honest.
   Transformer transformer_;
 
-  // Time Sync
-  typedef message_filters::sync_policies::ApproximateTime<
-      sensor_msgs::msg::Image, sensor_msgs::msg::CameraInfo>
-    time_policy_t;
+  // Syncronization of mesages ExactTime or ApproximateTime. Since in this version only a single queue is maintained
+  typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::CameraInfo> image_pair_sync_pol;
 
-  // Depth sub.
-  std::shared_ptr<message_filters::Synchronizer<time_policy_t>> timesync_depth_;
-  message_filters::Subscriber<sensor_msgs::msg::Image> depth_sub_;
-  message_filters::Subscriber<sensor_msgs::msg::CameraInfo>
-  depth_camera_info_sub_;
+  // Naively initiated subscribers. TODO(ugly and inefficient, monotonize)
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> depthSync1_;
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> rgbSync1_;
 
-  // Color sub
-  std::shared_ptr<message_filters::Synchronizer<time_policy_t>> timesync_color_;
-  message_filters::Subscriber<sensor_msgs::msg::Image> color_sub_;
-  message_filters::Subscriber<sensor_msgs::msg::CameraInfo>
-  color_camera_info_sub_;
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> depthSync2_;
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> rgbSync2_;
 
-  // Optional transform subs.
-  rclcpp::Subscription<geometry_msgs::msg::TransformStamped>::SharedPtr
-    transform_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> depthSync3_;
+  std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> rgbSync3_;
 
-  // Publishers
-  rclcpp::Publisher<nvblox_msgs::msg::Mesh>::SharedPtr mesh_publisher_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
-    pointcloud_publisher_;
-  rclcpp::Publisher<nvblox_msgs::msg::DistanceMapSlice>::SharedPtr
-    map_slice_publisher_;
+  message_filters::Subscriber<sensor_msgs::Image> depth_sub1_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> depth_camera_info_sub1_;
 
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr save_ply_service_;
+  message_filters::Subscriber<sensor_msgs::Image> depth_sub2_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> depth_camera_info_sub2_;
+
+  message_filters::Subscriber<sensor_msgs::Image> depth_sub3_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> depth_camera_info_sub3_;
+
+  message_filters::Subscriber<sensor_msgs::Image> color_sub1_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> color_camera_info_sub1_;
+
+  message_filters::Subscriber<sensor_msgs::Image> color_sub2_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> color_camera_info_sub2_;
+
+  message_filters::Subscriber<sensor_msgs::Image> color_sub3_;
+  message_filters::Subscriber<sensor_msgs::CameraInfo> color_camera_info_sub3_;
+
+  // Ros hangle
+  ros::NodeHandle nodeHandle_;
+
+  ros::Subscriber transform_sub_;
+  ros::Subscriber pose_sub_;
+  ros::Publisher mesh_publisher_;
+  ros::Publisher pointcloud_publisher_;
+  ros::Publisher map_slice_publisher_;
+  ros::ServiceServer save_ply_service_;
 
   // ROS & nvblox settings
   float voxel_size_ = 0.05f;
@@ -128,10 +162,29 @@ private:
   std::string global_frame_ = "map";
   /// Pose frame to use if using transform topics.
   std::string pose_frame_ = "base_link";
+
   float max_tsdf_update_hz_ = 10.0f;
   float max_color_update_hz_ = 5.0f;
   float max_mesh_update_hz_ = 5.0f;
   float max_esdf_update_hz_ = 2.0f;
+
+  int memoryCheckingPeriod_{5};
+  bool useHelperFrame_{false};
+
+  //! Threshold to purge mesh in cache.
+  int memoryPurgeThreshold_{1000};
+
+  std::string depth_image_1_topic = "/point_cloud_colorizer_ros/depth_image_camera_1";
+  std::string depth_image_2_topic = "/point_cloud_colorizer_ros/depth_image_camera_2";
+  std::string depth_image_3_topic = "/point_cloud_colorizer_ros/depth_image_camera_3";
+
+  std::string rgb_image_1_topic = "/alphasense_driver_ros/cam3/dropped/debayered/slow";
+  std::string rgb_image_2_topic = "/alphasense_driver_ros/cam4/dropped/debayered/slow";
+  std::string rgb_image_3_topic = "/alphasense_driver_ros/cam5/dropped/debayered/slow";
+
+  std::string camera_info_1_topic = "/camera_utils/alphasense_cam3/cameraInfo";
+  std::string camera_info_2_topic = "/camera_utils/alphasense_cam4/cameraInfo";
+  std::string camera_info_3_topic = "/camera_utils/alphasense_cam5/cameraInfo";
 
   // Mapper
   // Holds the map layers and their associated integrators
@@ -145,33 +198,21 @@ private:
   ColorImage color_image_;
   DepthImage depth_image_;
 
-  // Message statistics (useful for debugging)
-  libstatistics_collector::topic_statistics_collector::
-  ReceivedMessagePeriodCollector<sensor_msgs::msg::Image>
-  depth_frame_statistics_;
-  libstatistics_collector::topic_statistics_collector::
-  ReceivedMessagePeriodCollector<sensor_msgs::msg::Image>
-  rgb_frame_statistics_;
-
   // Output directory
-  std::string output_dir_ = "";
+  std::string output_dir_{""};
 
   // State for integrators running at various speeds.
-  rclcpp::Time last_tsdf_update_time_;
-  rclcpp::Time last_color_update_time_;
-  rclcpp::Time last_esdf_update_time_;
-  rclcpp::Time last_mesh_update_time_;
+  ros::Time last_tsdf_update_time_;
+  ros::Time last_color_update_time_;
+  ros::Time last_esdf_update_time_;
+  ros::Time last_mesh_update_time_;
 
   // Cache the last known number of subscribers.
-  size_t mesh_subscriber_count_ = 0;
+  std::size_t mesh_subscriber_count_{0u};
 
   // Image queues.
-  std::deque<std::pair<sensor_msgs::msg::Image::ConstSharedPtr,
-    sensor_msgs::msg::CameraInfo::ConstSharedPtr>>
-  depth_image_queue_;
-  std::deque<std::pair<sensor_msgs::msg::Image::ConstSharedPtr,
-    sensor_msgs::msg::CameraInfo::ConstSharedPtr>>
-  color_image_queue_;
+  std::deque<std::pair<sensor_msgs::ImageConstPtr, sensor_msgs::CameraInfoConstPtr>> depth_image_queue_;
+  std::deque<std::pair<sensor_msgs::ImageConstPtr, sensor_msgs::CameraInfoConstPtr>> color_image_queue_;
 };
 
 }  // namespace nvblox

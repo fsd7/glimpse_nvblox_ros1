@@ -24,25 +24,40 @@ if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 message( STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
+set(BUILD_EXPERIMENTS OFF)
+set(BUILD_TESTS OFF)
+set(BUILD_TESTING OFF)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Index3D.msg"
-  "msg/MeshBlock.msg"
-  "msg/Mesh.msg"
-  "msg/DistanceMapSlice.msg"
-  DEPENDENCIES std_msgs geometry_msgs
+# find dependencies
+find_package(catkin REQUIRED
+  COMPONENTS
+    geometry_msgs
+    message_generation
+    std_msgs
 )
 
-ament_export_dependencies(rosidl_default_runtime std_msgs geometry_msgs)
+add_message_files(
+  FILES
+    Index3D.msg
+    MeshBlock.msg
+    Mesh.msg
+    DistanceMapSlice.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+    geometry_msgs
+    std_msgs
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_package()
+catkin_package(
+  CATKIN_DEPENDS
+    geometry_msgs
+    message_runtime
+    std_msgs
+)

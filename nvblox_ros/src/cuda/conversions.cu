@@ -98,7 +98,7 @@ __global__ void copyPointcloudToPCL(
 template <typename VoxelType>
 void RosConverter::convertLayerInAABBToPCLCuda(
     const VoxelBlockLayer<VoxelType>& layer, const AxisAlignedBoundingBox& aabb,
-    sensor_msgs::msg::PointCloud2* pointcloud) {
+    sensor_msgs::PointCloud2* pointcloud) {
   constexpr int kVoxelsPerSide = VoxelBlock<TsdfVoxel>::kVoxelsPerSide;
   constexpr int kVoxelsPerBlock =
       kVoxelsPerSide * kVoxelsPerSide * kVoxelsPerSide;
@@ -161,9 +161,9 @@ void RosConverter::convertLayerInAABBToPCLCuda(
   pointcloud->row_step = output_size;
 
   // Populate the fields.
-  sensor_msgs::msg::PointField point_field;
+  sensor_msgs::PointField point_field;
   point_field.name = "x";
-  point_field.datatype = sensor_msgs::msg::PointField::FLOAT32;
+  point_field.datatype = sensor_msgs::PointField::FLOAT32;
   point_field.offset = 0;
   point_field.count = 1;
 
@@ -182,14 +182,14 @@ void RosConverter::convertLayerInAABBToPCLCuda(
 // Template specializations.
 template void RosConverter::convertLayerInAABBToPCLCuda<TsdfVoxel>(
     const VoxelBlockLayer<TsdfVoxel>& layer, const AxisAlignedBoundingBox& aabb,
-    sensor_msgs::msg::PointCloud2* pointcloud);
+    sensor_msgs::PointCloud2* pointcloud);
 
 template void RosConverter::convertLayerInAABBToPCLCuda<EsdfVoxel>(
     const VoxelBlockLayer<EsdfVoxel>& layer, const AxisAlignedBoundingBox& aabb,
-    sensor_msgs::msg::PointCloud2* pointcloud);
+    sensor_msgs::PointCloud2* pointcloud);
 
 void RosConverter::meshBlockMessageFromMeshBlock(
-    const MeshBlock& mesh_block, nvblox_msgs::msg::MeshBlock* mesh_block_msg) {
+    const MeshBlock& mesh_block, nvblox_msgs::MeshBlock* mesh_block_msg) {
   CHECK_NOTNULL(mesh_block_msg);
 
   size_t num_vertices = mesh_block.vertices.size();
@@ -226,12 +226,23 @@ struct DivideBy1000 : public thrust::unary_function<uint16_t, float> {
 
 // Convert image to depth frame object
 bool RosConverter::depthImageFromImageMessage(
-    const sensor_msgs::msg::Image::ConstSharedPtr& image_msg,
+    const sensor_msgs::ImageConstPtr& image_msg,
     DepthImage* depth_image) {
   CHECK_NOTNULL(depth_image);
   // If the image is a float, we can just copy it over directly.
   // If the image is int16, we need to divide by 1000 to get the correct
   // format for us.
+  
+  /*
+  std::cout << "Processing depth image" << std::endl;
+  std::cout << "Processing depth image data is " << &image_msg->data[0] << std::endl;
+  std::cout << "Processing depth image encoding is " << image_msg->encoding << std::endl;
+  std::cout << "Processing depth image step is " << image_msg->step << std::endl;
+  std::cout << "Processing depth image width is " << image_msg->width << std::endl;
+  std::cout << "Processing depth image height is " << image_msg->height << std::endl;
+  std::cout << "SizeOf Uint16 is " << sizeof(uint16_t) << std::endl;
+  std::cout << "SizeOf Uint8 is " << sizeof(uint8_t) << std::endl;
+*/
 
   // First check if we actually have a valid image here.
   if (image_msg->encoding != "32FC1" && image_msg->encoding != "16UC1") {
@@ -245,15 +256,21 @@ bool RosConverter::depthImageFromImageMessage(
         image_msg->height, image_msg->width,
         reinterpret_cast<const float*>(&image_msg->data[0]));
   } else if (image_msg->encoding == "16UC1") {
+    
     // Then we have to just go byte-by-byte and convert this. This is a massive
     // pain and slow. We need to find a better way to do this; on GPU or
     // through openCV.
     const uint16_t* char_depth_buffer =
         reinterpret_cast<const uint16_t*>(&image_msg->data[0]);
-    const int numel = image_msg->height * image_msg->width;
+    
+    const int intWidth = image_msg->width;
+    const int intHeight = image_msg->height;
 
+    const int numel = intWidth * intHeight;
+    
     bool kUseCuda = false;
     if (kUseCuda) {
+      
       // Make sure there's enough output space.
       if (depth_image->numel() < numel) {
         *depth_image = DepthImage(image_msg->height, image_msg->width,
@@ -261,15 +278,17 @@ bool RosConverter::depthImageFromImageMessage(
       }
 
       // Now just thrust it.
-      thrust::transform(char_depth_buffer, char_depth_buffer + numel,
-                        depth_image->dataPtr(), DivideBy1000());
+      thrust::transform(char_depth_buffer, char_depth_buffer + numel, depth_image->dataPtr(), DivideBy1000());
     } else {
       std::vector<float> float_depth_buffer(numel);
+      
       for (int i = 0; i < numel; i++) {
         float_depth_buffer[i] =
             static_cast<float>(char_depth_buffer[i]) / 1000.0f;
+            if(!std::isfinite(float_depth_buffer[i])){
+            }
       }
-      depth_image->populateFromBuffer(image_msg->height, image_msg->width,
+      depth_image->populateFromBuffer(intHeight, intWidth,
                                       float_depth_buffer.data(),
                                       MemoryType::kDevice);
     }

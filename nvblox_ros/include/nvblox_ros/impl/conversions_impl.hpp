@@ -17,10 +17,10 @@ namespace nvblox
 {
 
 // Helper function to output all valid points.
-template<typename VoxelType>
+template<typename VoxelType> 
 inline void RosConverter::pointcloudFromLayerInAABB(
   const VoxelBlockLayer<VoxelType> & layer, const AxisAlignedBoundingBox & aabb,
-  sensor_msgs::msg::PointCloud2 * pointcloud_msg)
+  sensor_msgs::PointCloud2 * pointcloud_msg)
 {
   CHECK_NOTNULL(pointcloud_msg);
   convertLayerInAABBToPCLCuda<VoxelType>(layer, aabb, pointcloud_msg);
@@ -30,26 +30,26 @@ inline void RosConverter::pointcloudFromLayerInAABB(
 template<typename VoxelType>
 inline void RosConverter::pointcloudFromLayer(
   const VoxelBlockLayer<VoxelType> & layer,
-  sensor_msgs::msg::PointCloud2 * pointcloud_msg)
+  sensor_msgs::PointCloud2 * pointcloud_msg)
 {
   AxisAlignedBoundingBox aabb;
   aabb.setEmpty();
   pointcloudFromLayerInAABB<VoxelType>(layer, aabb, pointcloud_msg);
 }
 
-geometry_msgs::msg::Point32 pointMessageFromVector(
+geometry_msgs::Point32 pointMessageFromVector(
   const Eigen::Vector3f & vector)
 {
-  geometry_msgs::msg::Point32 point;
+  geometry_msgs::Point32 point;
   point.x = vector.x();
   point.y = vector.y();
   point.z = vector.z();
   return point;
 }
 
-std_msgs::msg::ColorRGBA colorMessageFromColor(const Color & color)
+std_msgs::ColorRGBA colorMessageFromColor(const Color & color)
 {
-  std_msgs::msg::ColorRGBA color_msg;
+  std_msgs::ColorRGBA color_msg;
   color_msg.r = static_cast<float>(color.r) / 255.0f;
   color_msg.g = static_cast<float>(color.g) / 255.0f;
   color_msg.b = static_cast<float>(color.b) / 255.0f;
@@ -57,9 +57,9 @@ std_msgs::msg::ColorRGBA colorMessageFromColor(const Color & color)
   return color_msg;
 }
 
-nvblox_msgs::msg::Index3D index3DMessageFromIndex3D(const Index3D & index)
+nvblox_msgs::Index3D index3DMessageFromIndex3D(const Index3D & index)
 {
-  nvblox_msgs::msg::Index3D index_msg;
+  nvblox_msgs::Index3D index_msg;
   index_msg.x = index.x();
   index_msg.y = index.y();
   index_msg.z = index.z();

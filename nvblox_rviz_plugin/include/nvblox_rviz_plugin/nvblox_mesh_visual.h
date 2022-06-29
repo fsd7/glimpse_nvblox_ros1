@@ -10,9 +10,13 @@
  
 #pragma once
 
-#include <OgreManualObject.h>
+#include <OGRE/OgreManualObject.h>
+#include <OGRE/OgreQuaternion.h>
+#include <OGRE/OgreSceneNode.h>
+#include <OGRE/OgreSceneManager.h>
+#include <OGRE/OgreVector3.h>
 
-#include <nvblox_msgs/msg/mesh.hpp>
+#include <nvblox_msgs/Mesh.h>
 
 #include "nvblox_rviz_plugin/nvblox_hash_utils.h"
 
@@ -25,14 +29,13 @@ class NvbloxMeshVisual {
                    Ogre::SceneNode* parent_node);
   virtual ~NvbloxMeshVisual();
 
-  void setMessage(const nvblox_msgs::msg::Mesh::ConstSharedPtr& msg);
+  void setMessage(const nvblox_msgs::Mesh::ConstPtr& msg);
 
   /// Set the coordinate frame pose.
   void setFramePosition(const Ogre::Vector3& position);
   void setFrameOrientation(const Ogre::Quaternion& orientation);
 
   void setCeilingCutoff(bool cut_ceiling, float ceiling_height);
-
  private:
   Ogre::SceneNode* frame_node_;
   Ogre::SceneManager* scene_manager_;

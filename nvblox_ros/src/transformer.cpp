@@ -14,22 +14,21 @@
 #include <memory>
 #include <string>
 
+#include <ros/duration.h>
+
 namespace nvblox
 {
 
-Transformer::Transformer(rclcpp::Node * node)
-: node_(node)
-{
+Transformer::Transformer(ros::NodeHandle& nodeHandle) : nodeHandleTransform_(nodeHandle){
   // Get params like "use_tf_transforms".
-  use_tf_transforms_ =
-    node->declare_parameter<bool>("use_tf_transforms", use_tf_transforms_);
-  use_topic_transforms_ = node->declare_parameter<bool>(
-    "use_topic_transforms",
-    use_topic_transforms_);
-
+  nodeHandleTransform_.param<bool>(nodeHandleTransform_.getNamespace() +"/use_tf_transforms", use_tf_transforms_, false);
+  nodeHandleTransform_.param<bool>(nodeHandleTransform_.getNamespace() +"/use_topic_transforms", use_topic_transforms_, false);
+  
   // Init the transform listeners if we ARE using TF at all.
   if (use_tf_transforms_) {
-    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node->get_clock());
+
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(ros::Duration(100));
+
     transform_listener_ =
       std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   }
@@ -37,13 +36,12 @@ Transformer::Transformer(rclcpp::Node * node)
 
 bool Transformer::lookupTransformToGlobalFrame(
   const std::string & sensor_frame,
-  const rclcpp::Time & timestamp,
+  const ros::Time & timestamp,
   Transform * transform)
 {
   if (!use_tf_transforms_ && !use_topic_transforms_) {
     // ERROR HERE, literally can't do anything.
-    RCLCPP_ERROR(
-      node_->get_logger(),
+    ROS_ERROR(
       "Not using TF OR topic transforms, what do you want us to use?");
     return false;
   }
@@ -79,30 +77,30 @@ bool Transformer::lookupTransformToGlobalFrame(
 }
 
 void Transformer::transformCallback(
-  const geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_msg)
+  const geometry_msgs::TransformStampedConstPtr& transform_msg)
 {
-  rclcpp::Time timestamp = transform_msg->header.stamp;
-  transform_queue_[timestamp.nanoseconds()] =
+  ros::Time timestamp = transform_msg->header.stamp;
+  transform_queue_[timestamp.toNSec()] =
     tf2::transformToEigen(*transform_msg).matrix().cast<float>();
 }
 
 void Transformer::poseCallback(
-  const geometry_msgs::msg::PoseStamped::ConstSharedPtr transform_msg)
+  const geometry_msgs::PoseStampedConstPtr& transform_msg)
 {
-  rclcpp::Time timestamp = transform_msg->header.stamp;
+  ros::Time timestamp = transform_msg->header.stamp;
   Eigen::Affine3d T_G_P_double;
   Eigen::fromMsg(transform_msg->pose, T_G_P_double);
-  transform_queue_[timestamp.nanoseconds()] =
+  transform_queue_[timestamp.toNSec()] =
     T_G_P_double.matrix().cast<float>();
 }
 
 bool Transformer::lookupTransformTf(
   const std::string & from_frame,
   const std::string & to_frame,
-  const rclcpp::Time & timestamp,
+  const ros::Time & timestamp,
   Transform * transform)
 {
-  geometry_msgs::msg::TransformStamped T_S_C_msg;
+  geometry_msgs::TransformStamped T_S_C_msg;
   try {
     if (tf_buffer_->canTransform(from_frame, to_frame, timestamp)) {
       T_S_C_msg = tf_buffer_->lookupTransform(from_frame, to_frame, timestamp);
@@ -118,10 +116,10 @@ bool Transformer::lookupTransformTf(
 }
 
 bool Transformer::lookupTransformQueue(
-  const rclcpp::Time & timestamp,
+  const ros::Time & timestamp,
   Transform * transform)
 {
-  uint64_t timestamp_ns = timestamp.nanoseconds();
+  uint64_t timestamp_ns = timestamp.toNSec();
 
   auto closest_match = transform_queue_.lower_bound(timestamp_ns);
   if (closest_match == transform_queue_.end()) {
@@ -154,12 +152,11 @@ bool Transformer::lookupSensorTransform(
     }
     bool success = lookupTransformTf(
       pose_frame_, sensor_frame,
-      node_->get_clock()->now(), transform);
+      ros::Time::now(), transform);
     if (success) {
       sensor_transforms_[sensor_frame] = *transform;
     } else {
-      RCLCPP_INFO(
-        node_->get_logger(),
+      ROS_INFO(
         "Could not look up transform to sensor.");
     }
     return success;

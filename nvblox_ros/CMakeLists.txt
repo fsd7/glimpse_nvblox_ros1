@@ -23,20 +23,78 @@ message( STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 ################
 # DEPENDENCIES #
 ################
-find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_auto REQUIRED)
 
-find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(std_srvs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_eigen REQUIRED)
-find_package(nvblox_msgs REQUIRED)
-find_package(libstatistics_collector REQUIRED)
-find_package(message_filters REQUIRED)
-find_package(nvblox REQUIRED)
+
+list(APPEND CMAKE_INCLUDE_PATH "/usr/local/include")
+
+
+
+if(NOT WIN32)
+  string(ASCII 27 Esc)
+  set(ColourReset "${Esc}[m")
+  set(BoldMagenta "${Esc}[1;35m")
+  set(Magenta     "${Esc}[35m")
+endif()
+
+message("${Magenta}INFO: ${CMAKE_MODULE_PATH}.${ColourReset}")
+message("${Magenta}INFO: ${CMAKE_PREFIX_PATH}.${ColourReset}")
+message("${Magenta}INFO: ${CMAKE_FIND_ROOT_PATH}.${ColourReset}")
+message("${Magenta}INFO: ${CMAKE_INCLUDE_PATH}.${ColourReset}")
+
+find_package (Eigen3 3.3.7 REQUIRED NO_MODULE)
+
+find_package(OpenCV REQUIRED)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  std_msgs
+  std_srvs
+  sensor_msgs
+  geometry_msgs
+  tf2_ros
+  tf2_eigen
+  nvblox_msgs
+  cv_bridge
+)
+
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+  INCLUDE_DIRS
+    include
+  LIBRARIES
+  ${PROJECT_NAME}
+  CATKIN_DEPENDS
+    roscpp
+    std_msgs
+    std_srvs
+    sensor_msgs
+    geometry_msgs
+    tf2_ros
+    tf2_eigen
+    nvblox_msgs
+)
+
+# Process nvblox
+set(NVBLOX_DIR ../nvblox/nvblox)
+
+# Disable tests and experiments
+set(BUILD_EXPERIMENTS OFF)
+set(BUILD_TESTS OFF)
+
+# Direct the child cmake to install eigen to the devel space.
+# Note that we put it in the include/nvblox_ros directory, which should stop it
+# colliding with other versions of eigen used by other catkin packages.
+set(NVBLOX_EIGEN_CATKIN_INCLUDE_DESTINATION "${CMAKE_INSTALL_PREFIX}")
+set(EIGEN_INCLUDE_DESTINATION "${NVBLOX_EIGEN_CATKIN_INCLUDE_DESTINATION}")
+set(STDGPU_INSTALL_DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 ########
 # CUDA #
@@ -44,37 +102,32 @@ find_package(nvblox REQUIRED)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -Xcudafe --display_error_number --disable-warnings ")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --compiler-options -fPIC")
 
+##########
+# NVBLOX #
+##########
+add_subdirectory(${NVBLOX_DIR} nvblox)
+
+include_directories(AFTER include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+
 #############
 # LIBRARIES #
 #############
 add_library(${PROJECT_NAME}_lib SHARED
-  src/lib/conversions.cpp
-  src/lib/cuda/conversions.cu
-  src/lib/transformer.cpp
-  src/lib/nvblox_node.cpp
+  src/conversions.cpp
+  src/cuda/conversions.cu
+  src/transformer.cpp
 )
-target_link_libraries(${PROJECT_NAME}_lib nvblox::nvblox_lib nvblox::nvblox_eigen)
-ament_target_dependencies(${PROJECT_NAME}_lib
-  nvblox
-  sensor_msgs
-  geometry_msgs
-  nvblox_msgs
-  rclcpp
-  std_msgs
-  std_srvs
-  tf2_ros
-  message_filters
-)
-target_include_directories(${PROJECT_NAME}_lib PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_include_directories(${PROJECT_NAME}_lib BEFORE PRIVATE 
-  $<TARGET_PROPERTY:nvblox::nvblox_eigen,INTERFACE_INCLUDE_DIRECTORIES>)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.18)
-  get_target_property(CUDA_ARCHS nvblox::nvblox_lib CUDA_ARCHITECTURES)
-  set_target_properties(${PROJECT_NAME}_lib PROPERTIES CUDA_ARCHITECTURES ${CUDA_ARCHS}) 
-endif()
+target_link_libraries(${PROJECT_NAME}_lib 
+  nvblox_interface
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES})
+
+add_dependencies(${PROJECT_NAME}_lib
+  ${catkin_EXPORTED_TARGETS})
+
+target_include_directories(${PROJECT_NAME}_lib SYSTEM PUBLIC
+  ${catkin_INCLUDE_DIRS})  
 
 ############
 # BINARIES #
@@ -82,65 +135,64 @@ endif()
 add_executable(nvblox_node
   src/nvblox_node.cpp
 )
+
 target_link_libraries(nvblox_node ${PROJECT_NAME}_lib)
+
+add_dependencies(nvblox_node
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_include_directories(nvblox_node SYSTEM PUBLIC
+  ${catkin_INCLUDE_DIRS}
+)
+
 
 add_executable(3dmatch_node
   src/3dmatch_node.cpp
 )
+
 target_link_libraries(3dmatch_node ${PROJECT_NAME}_lib)
+
+add_dependencies(3dmatch_node
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_include_directories(3dmatch_node SYSTEM PUBLIC
+  ${catkin_INCLUDE_DIRS}
+)
 
 ###########
 # INSTALL #
 ###########
-# Install includes.
+# catkin_simple doesn't manage everything in our case, where we're installing
+# not only the ros package nvblox_ros, but it's dependancies from nvblox.
+# We therefore export the nvblox target along with the nvblox_ros stuff.
+get_target_property(nvblox_INCLUDES nvblox_interface INTERFACE_INCLUDE_DIRECTORIES)
+
 install(
-  DIRECTORY include/
+  DIRECTORY 
+    include/${PROJECT_NAME}/
   DESTINATION include
 )
 
-# Install the library target.
 install(
-  TARGETS ${PROJECT_NAME}_lib
-  EXPORT ${PROJECT_NAME}Targets
+  DIRECTORY
+    config
+    launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(
+  TARGETS ${PROJECT_NAME}_lib nvblox_lib nvblox_gpu_hash nvblox_cuda_check
+  EXPORT nvbloxTargets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
 )
 
-# Install nodes which live in lib for some reason.
+# Install nodes
 install(
   TARGETS nvblox_node 3dmatch_node
   DESTINATION lib/${PROJECT_NAME}
 )
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-
-  # Ignore copyright notices since we use custom NVIDIA Isaac ROS Software License
-  set(ament_cmake_copyright_FOUND TRUE)
-
-  ament_lint_auto_find_test_dependencies()
-endif()
-
-##########
-# EXPORT #
-##########
-ament_export_include_directories(
-  include
-)
-ament_export_libraries(
-  ${PROJECT_NAME}_lib
-)
-ament_export_targets(
-  ${PROJECT_NAME}Targets
-)
-
-ament_export_dependencies(
-  nvblox
-  tf2_ros
-  message_filters
-  libstatistics_collector
-)
-
-ament_package()

@@ -15,9 +15,10 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
-#include <geometry_msgs/msg/pose_stamped.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
 
 #include <map>
 #include <memory>
@@ -32,19 +33,19 @@ namespace nvblox
 class Transformer
 {
 public:
-  explicit Transformer(rclcpp::Node * node);
+  explicit Transformer(ros::NodeHandle& nodeHandle);
 
   bool lookupTransformToGlobalFrame(
     const std::string & sensor_frame,
-    const rclcpp::Time & timestamp,
+    const ros::Time & timestamp,
     Transform * transform);
 
   /// Assumes these transforms are from GLOBAL frame to POSE frame. Ignores
   /// frame_id.
   void transformCallback(
-    const geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_msg);
+    const geometry_msgs::TransformStampedConstPtr& transform_msg);
   void poseCallback(
-    const geometry_msgs::msg::PoseStamped::ConstSharedPtr transform_msg);
+    const geometry_msgs::PoseStampedConstPtr& transform_msg);
 
   /// Set the names of the frames.
   void set_global_frame(const std::string & global_frame)
@@ -61,10 +62,10 @@ private:
   bool lookupTransformTf(
     const std::string & from_frame,
     const std::string & to_frame,
-    const rclcpp::Time & timestamp, Transform * transform);
+    const ros::Time & timestamp, Transform * transform);
 
   bool lookupTransformQueue(
-    const rclcpp::Time & timestamp,
+    const ros::Time & timestamp,
     Transform * transform);
 
   bool lookupSensorTransform(
@@ -72,9 +73,10 @@ private:
     Transform * transform);
 
   /// ROS State
-  rclcpp::Node * node_;
-  std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  ros::NodeHandle nodeHandleTransform_;
+
+  std::shared_ptr<tf2_ros::TransformListener> transform_listener_ = nullptr;
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_= nullptr;
 
   /// Global/map coordinate frame. Will always look up TF transforms to this
   /// frame.
@@ -84,7 +86,7 @@ private:
 
   /// Whether to use TF at all. If set to false, sensor_frame and pose_frame
   /// *need* to be set.
-  bool use_tf_transforms_ = true;
+  bool use_tf_transforms_ = false;
   /// Whether to listen to topics for transforms. If set to true, will get
   /// at least global -> pose frame from the topics. If set to false, everything
   /// will be resolved through TF.

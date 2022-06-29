@@ -15,11 +15,10 @@
 #include <nvblox/nvblox.h>
 #include <nvblox/utils/timing.h>
 
-
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <ros/ros.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/Image.h>
+#include <std_msgs/String.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -33,13 +32,13 @@
 namespace nvblox
 {
 
-class Nvblox3DMatchNode : public rclcpp::Node
+class Nvblox3DMatchNode
 {
 public:
-  Nvblox3DMatchNode();
+  Nvblox3DMatchNode(ros::NodeHandle& nodeHandle);
 
   /// Get the next frame in the dataset.
-  void timerCallback();
+  void timerCallback(const ros::TimerEvent& event);
 
   /// Integrate a particular frame number.
   bool integrateFrame(const int frame_number);
@@ -50,11 +49,14 @@ private:
   void setupRos();
 
   /// Publish markers for visualization.
-  rclcpp::Publisher<nvblox_msgs::msg::Mesh>::SharedPtr mesh_publisher_;
+  //ros::Publisher<nvblox_msgs::msg::Mesh>::SharedPtr mesh_publisher_;
+  ros::Publisher mesh_publisher_;
+
+  ros::NodeHandle nodeHandle3D_;
 
   /// Timers.
-  rclcpp::TimerBase::SharedPtr update_timer_;
-
+  //ros::TimerBase::SharedPtr update_timer_;
+  ros::Timer update_timer_;
   /// Converer.
   RosConverter converter_;
 
@@ -80,36 +82,41 @@ private:
   MeshIntegrator mesh_integrator_;
 };
 
-Nvblox3DMatchNode::Nvblox3DMatchNode()
-: Node("nvblox_3dmatch_node")
-{
+Nvblox3DMatchNode::Nvblox3DMatchNode(ros::NodeHandle& nodeHandle): nodeHandle3D_(nodeHandle){
   setupRos();
 }
 
 void Nvblox3DMatchNode::setupRos()
 {
   double time_between_frames = 0.5;  // seconds
-  time_between_frames =
-    declare_parameter<float>("time_between_frames", time_between_frames);
+  //time_between_frames =declare_parameter<float>("time_between_frames", time_between_frames);
 
-  base_path_ = declare_parameter<std::string>("path", base_path_);
+  nodeHandle3D_.param<double>(nodeHandle3D_.getNamespace() +"/time_between_frames", time_between_frames, 0.5);
+
+  //base_path_ = declare_parameter<std::string>("path", base_path_);
+
+  nodeHandle3D_.param<std::string>(nodeHandle3D_.getNamespace() +"/path", base_path_, "");
 
   if (base_path_.empty()) {
-    RCLCPP_ERROR(get_logger(), "No base path specified!");
+    ROS_ERROR("No base path specified!");
     return;
   }
 
   // Mesh publishing
-  mesh_publisher_ = this->create_publisher<nvblox_msgs::msg::Mesh>("mesh", 1);
+  //mesh_publisher_ = this->create_publisher<nvblox_msgs::Mesh>("mesh", 1);
+  mesh_publisher_ = nodeHandle3D_.advertise<nvblox_msgs::Mesh>("mesh",1,false);
 
   // Image settings
-  rotate_optical_frame_ =
-    declare_parameter<bool>("rotate_optical_frame", rotate_optical_frame_);
-  rotate_world_frame_ =
-    declare_parameter<bool>("rotate_world_frame", rotate_world_frame_);
+  //rotate_optical_frame_ =     declare_parameter<bool>("rotate_optical_frame", rotate_optical_frame_);
+  //rotate_world_frame_ =     declare_parameter<bool>("rotate_world_frame", rotate_world_frame_);
+
+  nodeHandle3D_.param<bool>(nodeHandle3D_.getNamespace() +"/rotate_optical_frame", rotate_optical_frame_, false);
+  nodeHandle3D_.param<bool>(nodeHandle3D_.getNamespace() +"/rotate_world_frame", rotate_world_frame_, true);
 
   // Create the layers.
-  voxel_size_ = declare_parameter<float>("voxel_size", voxel_size_);
+  //voxel_size_ = declare_parameter<float>("voxel_size", voxel_size_);
+
+  nodeHandle3D_.param<float>(nodeHandle3D_.getNamespace() +"/voxel_size", voxel_size_, 0.2);
 
   // Initialize the layers.
   const float block_size = voxel_size_ * VoxelBlock<bool>::kVoxelsPerSide;
@@ -120,30 +127,32 @@ void Nvblox3DMatchNode::setupRos()
 
   mesh_integrator_.min_weight() = 2.0f;
 
+  update_timer_ = nodeHandle3D_.createTimer(ros::Duration(time_between_frames), &Nvblox3DMatchNode::timerCallback, this);
+  /*
   // Create a timer to load a new frame every n seconds.
   update_timer_ =
     create_wall_timer(
     std::chrono::duration<float>(time_between_frames),
-    std::bind(&Nvblox3DMatchNode::timerCallback, this));
+    std::bind(&Nvblox3DMatchNode::timerCallback, this)); */
 }
 
-void Nvblox3DMatchNode::timerCallback()
+void Nvblox3DMatchNode::timerCallback(const ros::TimerEvent& /*event*/)
 {
   if (integrateFrame(frame_number_)) {
-    RCLCPP_INFO(get_logger(), "Outputting frame numer %d", frame_number_);
+    ROS_INFO("Outputting frame numer %d", frame_number_);
     frame_number_++;
   } else {
     // Kill timer.
-    RCLCPP_INFO(get_logger(), "Finished dataset.");
-    update_timer_->cancel();
+    ROS_INFO("Finished dataset.");
+    //update_timer_->cancel();
+    update_timer_.stop();
   }
 }
 
 bool Nvblox3DMatchNode::integrateFrame(const int frame_number)
 {
   if (!tsdf_layer_) {
-    RCLCPP_ERROR(
-      get_logger(),
+    ROS_ERROR(
       "No layer created. Please create a layer first.");
     return false;
   }
@@ -194,7 +203,7 @@ bool Nvblox3DMatchNode::integrateFrame(const int frame_number)
 
   // Rotate the camera frame to be an optical frame.
   if (rotate_optical_frame_) {
-    RCLCPP_INFO(get_logger(), "Rotating optical.");
+    ROS_INFO("Rotating optical.");
     Eigen::Matrix3f rotation;
     rotation << 0, 0, 1, -1, 0, 0, 0, -1, 0;
     T_L_C = T_L_C.rotate(rotation);
@@ -202,7 +211,7 @@ bool Nvblox3DMatchNode::integrateFrame(const int frame_number)
 
   // Rotate the world frame since Y is up in the normal 3D match dasets.
   if (rotate_world_frame_) {
-    RCLCPP_INFO(get_logger(), "Rotating world.");
+    ROS_INFO("Rotating world.");
     Eigen::Quaternionf q_L_O = Eigen::Quaternionf::FromTwoVectors(
       Vector3f(0, 1, 0), Vector3f(0, 0, 1));
     T_L_C = q_L_O * T_L_C;
@@ -234,13 +243,13 @@ bool Nvblox3DMatchNode::integrateFrame(const int frame_number)
   timer_integrate.Stop();
 
   // Publish the mesh updates.
-  nvblox_msgs::msg::Mesh mesh_msg;
+  nvblox_msgs::Mesh mesh_msg;
   converter_.meshMessageFromMeshBlocks(*mesh_layer_, updated_blocks, &mesh_msg);
 
   mesh_msg.header.frame_id = map_frame_id_;
-  mesh_msg.header.stamp = get_clock()->now();
-  mesh_publisher_->publish(mesh_msg);
-  RCLCPP_INFO(get_logger(), "Published a message.");
+  mesh_msg.header.stamp = ros::Time::now();//get_clock()->now();
+  mesh_publisher_.publish(mesh_msg);
+  ROS_INFO("Published a message.");
   return true;
 }
 
@@ -251,11 +260,14 @@ int main(int argc, char ** argv)
   google::InitGoogleLogging(argv[0]);
   FLAGS_alsologtostderr = true;
   google::InstallFailureSignalHandler();
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<nvblox::Nvblox3DMatchNode>());
-  rclcpp::shutdown();
+  //ros::init(argc, argv);
 
+  ros::init(argc, argv, "nvblox_3dmatch_node");
+  ros::NodeHandle nh("~");
+  nvblox::Nvblox3DMatchNode Nvblox3DMatchNode(nh);
+  ros::spin();
+  //ros::spin(std::make_shared<nvblox::Nvblox3DMatchNode>());
   std::cout << "Timings: " << nvblox::timing::Timing::Print();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

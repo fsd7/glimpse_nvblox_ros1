@@ -11,9 +11,6 @@
 #include <iostream>
 #include <limits>
 
-#include <OgreSceneManager.h>
-#include <OgreSceneNode.h>
-
 #include "nvblox_rviz_plugin/nvblox_mesh_visual.h"
 
 namespace nvblox_rviz_plugin {
@@ -30,9 +27,9 @@ NvbloxMeshVisual::NvbloxMeshVisual(Ogre::SceneManager* scene_manager,
 
 NvbloxMeshVisual::~NvbloxMeshVisual() {
   // Destroy all the objects
-  for (const auto ogre_object : object_map_) {
-    scene_manager_->destroyManualObject(ogre_object.second);
-  }
+  //for (const auto ogre_object : object_map_) {
+  //  scene_manager_->destroyManualObject(ogre_object.second);
+  //}
 }
 
 void NvbloxMeshVisual::setCeilingCutoff(bool cut_ceiling,
@@ -55,21 +52,21 @@ void NvbloxMeshVisual::setCeilingCutoff(bool cut_ceiling,
 }
 
 void NvbloxMeshVisual::setMessage(
-    const nvblox_msgs::msg::Mesh::ConstSharedPtr& msg) {
+    const nvblox_msgs::Mesh::ConstPtr& msg) {
   block_size_ = msg->block_size;
 
   // First, check if we need to clear the existing map.
   if (msg->clear) {
-    for (const auto ogre_object : object_map_) {
-      scene_manager_->destroyManualObject(ogre_object.second);
-    }
+    //for (const auto ogre_object : object_map_) {
+    //  scene_manager_->destroyManualObject(ogre_object.second);
+    //}
     object_map_.clear();
   }
 
   // Iterate over all the blocks in the message and make sure to add them.
   for (size_t i = 0; i < msg->block_indices.size(); i++) {
-    const nvblox_msgs::msg::Index3D& block_index = msg->block_indices[i];
-    const nvblox_msgs::msg::MeshBlock& mesh_block = msg->blocks[i];
+    const nvblox_msgs::Index3D& block_index = msg->block_indices[i];
+    const nvblox_msgs::MeshBlock& mesh_block = msg->blocks[i];
 
     // create ogre object
     Ogre::ManualObject* ogre_object;

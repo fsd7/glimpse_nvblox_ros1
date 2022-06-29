@@ -10,8 +10,7 @@ distribution of this software and related documentation without an express
 license agreement from NVIDIA CORPORATION is strictly prohibited.
 -->
 
-<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
-<package format="3">
+<package format="2">
   <name>nvblox_ros</name>
   <version>0.9.3</version>
   <description>NVBlox ROS2 interface</description>
@@ -23,25 +22,19 @@ license agreement from NVIDIA CORPORATION is strictly prohibited.
   <author>Helen Oleynikova</author>
   <author>Alexander Millane</author>
   
-  <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>catkin</buildtool_depend>
 
   <depend>geometry_msgs</depend>
-  <depend>libstatistics_collector</depend>
   <depend>nvblox_msgs</depend>
-  <depend>rclcpp</depend>
+  <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
   <depend>tf2_eigen</depend>
   <depend>tf2_ros</depend>
-  <depend>message_filters</depend>
-  <depend>nvblox</depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <depend>cv_bridge</depend>
 
   <export>
-    <build_type>ament_cmake</build_type>
+    <build_type>catkin</build_type>
   </export>
 </package>
