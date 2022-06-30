@@ -4,13 +4,12 @@
  <arg name="use_sim_time"                    default="true" doc="Path to the ROS bag dataset to run SLAM on."/>
 
   <arg name="default_param_file"     value="$(find nvblox_ros)/config/parameters.yaml"/>
-  <arg name="overlying_param_file"   default="$(arg default_param_file)" doc="Parameter file overlying parts or all parameters."/>
   <arg name="output"                 default="screen"                    doc="Output target: screen or log."/>
 
   <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nvblox_ros)/config/rosconsole.config"/>
 
   <!-- Node name -->
-  <arg name="node_name"                       default="nvblox_node"/>
+  <arg name="node_name"                       default="nvblox_ros"/>
 
   <!--<node type="rviz" name="rviz" pkg="rviz" args="-d $(find nvblox_ros)/rviz/rviz.rviz"/> -->
 

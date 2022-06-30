@@ -133,28 +133,28 @@ bool NvbloxNode::readMappingParameters(){
   bool success{true};
   // Integrator settings.
   float max_integration_distance_m_local = 10.0f;
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/tsdf_integrator_max_integration_distance_m", max_integration_distance_m_local, 10.0f);
+  success &= nodeHandle_.param<float>("tsdf_integrator_max_integration_distance_m", max_integration_distance_m_local, 10.0f);
   mapper_->tsdf_integrator().max_integration_distance_m(max_integration_distance_m_local);
   
   float truncation_distance_vox_local = 4.0f;
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/tsdf_integrator_truncation_distance_vox", truncation_distance_vox_local, 4.0f);
+  success &= nodeHandle_.param<float>("tsdf_integrator_truncation_distance_vox", truncation_distance_vox_local, 4.0f);
   mapper_->tsdf_integrator().truncation_distance_vox(truncation_distance_vox_local);
 
   float max_weight_local = 100.0f;
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/tsdf_integrator_max_weight", max_weight_local, 100.0f);
+  success &= nodeHandle_.param<float>("tsdf_integrator_max_weight", max_weight_local, 100.0f);
   mapper_->tsdf_integrator().max_weight(max_weight_local);
 
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/mesh_integrator_min_weight", mapper_->mesh_integrator().min_weight(), 1e-4);
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/mesh_integrator_weld_vertices", mapper_->mesh_integrator().weld_vertices(), false);
+  success &= nodeHandle_.param<float>("mesh_integrator_min_weight", mapper_->mesh_integrator().min_weight(), 1e-4);
+  success &= nodeHandle_.param<bool>("mesh_integrator_weld_vertices", mapper_->mesh_integrator().weld_vertices(), false);
 
   float max_integration_distance_m_color_local = 10.0f;
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/color_integrator_max_integration_distance_m", max_integration_distance_m_color_local, 10.0f);
+  success &= nodeHandle_.param<float>("color_integrator_max_integration_distance_m", max_integration_distance_m_color_local, 10.0f);
   mapper_->color_integrator().max_integration_distance_m(max_integration_distance_m_color_local);
 
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/esdf_integrator_min_weight", mapper_->esdf_integrator().min_weight(), 1e-4);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/esdf_integrator_min_site_distance_vox", mapper_->esdf_integrator().min_site_distance_vox(), 1.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/esdf_integrator_max_distance_m", mapper_->esdf_integrator().max_distance_m(), 10.0f);
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/output_dir", output_dir_, "");
+  success &= nodeHandle_.param<float>("esdf_integrator_min_weight", mapper_->esdf_integrator().min_weight(), 1e-4);
+  success &= nodeHandle_.param<float>("esdf_integrator_min_site_distance_vox", mapper_->esdf_integrator().min_site_distance_vox(), 1.0f);
+  success &= nodeHandle_.param<float>("esdf_integrator_max_distance_m", mapper_->esdf_integrator().max_distance_m(), 10.0f);
+  success &= nodeHandle_.param<std::string>("output_dir", output_dir_, "");
   
   return success;
 }
@@ -162,40 +162,40 @@ bool NvbloxNode::readMappingParameters(){
 bool NvbloxNode::readParameters(){
   bool success{true};
   // Ros param reading.
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/voxel_size", voxel_size_, 0.05f);
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/global_frame", global_frame_, "map"); 
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/pose_frame", pose_frame_, "base");
-  success &= nodeHandle_.param<int>(nodeHandle_.getNamespace() +"/memory_checking_period", memoryCheckingPeriod_, 5);
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/use_helper_frame", useHelperFrame_, false);
-  success &= nodeHandle_.param<int>(nodeHandle_.getNamespace() +"/memory_purge_threshold", memoryPurgeThreshold_, 750);
+  success &= nodeHandle_.param<float>("voxel_size", voxel_size_, 0.05f);
+  success &= nodeHandle_.param<std::string>("global_frame", global_frame_, "map"); 
+  success &= nodeHandle_.param<std::string>("pose_frame", pose_frame_, "base");
+  success &= nodeHandle_.param<int>("memory_checking_period", memoryCheckingPeriod_, 5);
+  success &= nodeHandle_.param<bool>("use_helper_frame", useHelperFrame_, false);
+  success &= nodeHandle_.param<int>("memory_purge_threshold", memoryPurgeThreshold_, 750);
 
   // Depth camera topics
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/depth_image_1_topic", depth_image_1_topic, "/point_cloud_colorizer_ros/depth_image_camera_1");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/depth_image_2_topic", depth_image_2_topic, "/point_cloud_colorizer_ros/depth_image_camera_2");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/depth_image_3_topic", depth_image_3_topic, "/point_cloud_colorizer_ros/depth_image_camera_3");
+  success &= nodeHandle_.param<std::string>("subscribers/depth_image_1_topic", depth_image_1_topic, "/point_cloud_colorizer_ros/depth_image_camera_1");
+  success &= nodeHandle_.param<std::string>("subscribers/depth_image_2_topic", depth_image_2_topic, "/point_cloud_colorizer_ros/depth_image_camera_2");
+  success &= nodeHandle_.param<std::string>("subscribers/depth_image_3_topic", depth_image_3_topic, "/point_cloud_colorizer_ros/depth_image_camera_3");
 
   // RBG camera topics
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/rgb_image_1_topic", rgb_image_1_topic, "/alphasense_driver_ros/cam3/dropped/debayered/slow");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/rgb_image_2_topic", rgb_image_2_topic, "/alphasense_driver_ros/cam4/dropped/debayered/slow");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/rgb_image_3_topic", rgb_image_3_topic, "/alphasense_driver_ros/cam5/dropped/debayered/slow");
+  success &= nodeHandle_.param<std::string>("subscribers/rgb_image_1_topic", rgb_image_1_topic, "/alphasense_driver_ros/cam3/dropped/debayered/slow");
+  success &= nodeHandle_.param<std::string>("subscribers/rgb_image_2_topic", rgb_image_2_topic, "/alphasense_driver_ros/cam4/dropped/debayered/slow");
+  success &= nodeHandle_.param<std::string>("subscribers/rgb_image_3_topic", rgb_image_3_topic, "/alphasense_driver_ros/cam5/dropped/debayered/slow");
 
   // Camera info topics
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/camera_info_1_topic", camera_info_1_topic, "/camera_utils/alphasense_cam3/cameraInfo");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/camera_info_2_topic", camera_info_2_topic, "/camera_utils/alphasense_cam4/cameraInfo");
-  success &= nodeHandle_.param<std::string>(nodeHandle_.getNamespace() +"/subscribers/camera_info_3_topic", camera_info_3_topic, "/camera_utils/alphasense_cam5/cameraInfo");
+  success &= nodeHandle_.param<std::string>("subscribers/camera_info_1_topic", camera_info_1_topic, "/camera_utils/alphasense_cam3/cameraInfo");
+  success &= nodeHandle_.param<std::string>("subscribers/camera_info_2_topic", camera_info_2_topic, "/camera_utils/alphasense_cam4/cameraInfo");
+  success &= nodeHandle_.param<std::string>("subscribers/camera_info_3_topic", camera_info_3_topic, "/camera_utils/alphasense_cam5/cameraInfo");
 
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/mesh", mesh_, true);
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/esdf", esdf_, true);
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/esdf_2d", esdf_2d_, true);
-  success &= nodeHandle_.param<bool>(nodeHandle_.getNamespace() +"/distance_slice", distance_slice_, true);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/slice_height", slice_height_, 1.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/min_height", min_height_, 0.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/max_height", max_height_, 1.0f);
+  success &= nodeHandle_.param<bool>("mesh", mesh_, true);
+  success &= nodeHandle_.param<bool>("esdf", esdf_, true);
+  success &= nodeHandle_.param<bool>("esdf_2d", esdf_2d_, true);
+  success &= nodeHandle_.param<bool>("distance_slice", distance_slice_, true);
+  success &= nodeHandle_.param<float>("slice_height", slice_height_, 1.0f);
+  success &= nodeHandle_.param<float>("min_height", min_height_, 0.0f);
+  success &= nodeHandle_.param<float>("max_height", max_height_, 1.0f);
   
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/max_tsdf_update_hz", max_tsdf_update_hz_, 10.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/max_color_update_hz", max_color_update_hz_, 5.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/max_mesh_update_hz", max_mesh_update_hz_, 5.0f);
-  success &= nodeHandle_.param<float>(nodeHandle_.getNamespace() +"/max_esdf_update_hz", max_esdf_update_hz_, 2.0f);
+  success &= nodeHandle_.param<float>("max_tsdf_update_hz", max_tsdf_update_hz_, 10.0f);
+  success &= nodeHandle_.param<float>("max_color_update_hz", max_color_update_hz_, 5.0f);
+  success &= nodeHandle_.param<float>("max_mesh_update_hz", max_mesh_update_hz_, 5.0f);
+  success &= nodeHandle_.param<float>("max_esdf_update_hz", max_esdf_update_hz_, 2.0f);
 
   int maxMeshingHeight{4};
   success &= nodeHandle_.param<int>(nodeHandle_.getNamespace() +"/max_meshing_height", maxMeshingHeight, 4);
