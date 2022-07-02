@@ -16,13 +16,20 @@
 #include <nvblox/utils/timing.h>
 
 // std libs
-#include <filesystem>
+
+// Jetson requires Jetpack 5.0 to have c++17 so libraries like filesystem cant be used now.
+//#include <filesystem>
+
 #include <limits>
 #include <memory>
 #include <string>
 #include <vector>
 #include <chrono>
 #include <condition_variable>
+#include <iostream>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <errno.h>
 
 #include "nvblox_ros/conversions.hpp"
 
@@ -54,8 +61,10 @@ NvbloxNode::NvbloxNode(ros::NodeHandle& nodeHandle) : nodeHandle_(nodeHandle), t
     return;
   }
 
-
-  ROS_INFO_STREAM("Outputting results (as requested) to: " << output_dir_);
+  // Prematurely check correctness and existance of save path.
+  if(!manageSaveDirectory()){
+    return;
+  }
 
   ROS_INFO_STREAM("Started up nvblox node in frame " <<
       global_frame_ << " and voxel size " <<
@@ -68,6 +77,92 @@ NvbloxNode::NvbloxNode(ros::NodeHandle& nodeHandle) : nodeHandle_(nodeHandle), t
   last_mesh_update_time_ = ros::Time(0.0);
 
   std::tie(freeMemoryAfterLastSave, std::ignore) = getFreeGPUMemory();
+}
+
+bool NvbloxNode::manageSaveDirectory(){
+
+  if(output_dir_.empty()){
+    // Get username
+    std::string userName{getlogin()};
+    ROS_INFO_STREAM("User name: " << userName);
+    output_dir_ = "/home/" + userName + "/maps";
+
+    if(!doesDirectoryExist(output_dir_)){
+      if(makePath(output_dir_)){
+        ROS_INFO_STREAM("Created folder : " << output_dir_);
+      }else{
+        ROS_ERROR_STREAM("Could not create folder " << output_dir_ << " Exitting program.");
+        return false;
+      }
+    }
+
+    ROS_INFO_STREAM("Outputting results (as requested) to: (" << output_dir_ << ")");
+
+  }else{
+    // Check if folder exists
+    if(!doesDirectoryExist(output_dir_)){
+      // If does not exist create the folder recursively.
+      if(makePath(output_dir_)){
+        ROS_INFO_STREAM("Created folder : " << output_dir_);
+      }else{
+        // Quit if the folder was not created.
+        ROS_ERROR_STREAM("Could not create folder " << output_dir_ << "Exitting program.");
+        return false;
+      }
+    }
+
+    ROS_INFO_STREAM("Outputting results (as requested) to: " << output_dir_);
+  }
+
+  return true;
+}
+
+bool NvbloxNode::makePath(const std::string& path)
+{
+  // C magic, read, write and execute rights.
+  const mode_t mode{0777};
+
+  if (mkdir(path.c_str(), mode) == 0){
+    return true;
+  }
+
+  // if the deepest folder was not possible to create check parents.
+  switch (errno)
+  {
+  case ENOENT:
+      // Parent didn't exist, try to create it
+      {
+          std::size_t lastSlashPosition{path.find_last_of('/')};
+          if (lastSlashPosition == std::string::npos){
+            // If the slash is at the end, nothing to do.
+            return false;
+          }
+          // Get the path until the previous `/` and create that path.
+          if (!makePath(path.substr(0, lastSlashPosition) )){
+            return false;
+          }
+      }
+      // now, try to create again
+      return 0 == mkdir(path.c_str(), mode);
+
+  case EEXIST:
+      // done!
+      return doesDirectoryExist(path);
+
+  default:
+      return false;
+  }
+}
+
+bool NvbloxNode::doesDirectoryExist(const std::string& path)
+{
+  struct stat info;
+
+  if(stat(path.c_str(), &info ) != 0){
+    return false;
+  }
+
+  return (info.st_mode & S_IFDIR) != 0;
 }
 
 void NvbloxNode::setupRosCommunication(){
@@ -526,49 +621,26 @@ void NvbloxNode::memoryTimerCallback(const ros::TimerEvent& /*event*/){
     // Generate mesh save path.
     const std::string nameOfFile{"/" + std::to_string(mapSaveCounter_) + "_nvblox_mesh" + ".ply"};
 
-    // Save the map to the file.
-    std::string fileName = "";
-
     ROS_INFO_STREAM("Requested save folder:  " << output_dir_);
 
-    if (output_dir_.empty()) {
-      // Currently we are saving to /home/<user>/.ros/maps folder. User is automatically detected.
-      const std::string topDirectoryPath{static_cast<std::string>(std::filesystem::current_path()) + "/maps"};
+    // Currently we are saving to /home/<user>/.ros/maps folder. User is automatically detected.
+    //const std::string topDirectoryPath{static_cast<std::string>(std::filesystem::current_path()) + "/maps"};
 
-      // First check and create the top level directory within ./ros folder.
-      if (!std::filesystem::exists(topDirectoryPath)) {
-        bool success{std::filesystem::create_directory(topDirectoryPath)};
-        if (!success) {
-          ROS_ERROR("Asked folder does not exist.");
-          return;
-        }
-        // Give permission to all to read, write and execute to the new directory.
-        std::filesystem::permissions(topDirectoryPath, std::filesystem::perms::all);
+    /*
+    // First check and create the top level directory within ./ros folder.
+    if (!std::filesystem::exists(topDirectoryPath)) {
+      bool success{std::filesystem::create_directory(topDirectoryPath)};
+      if (!success) {
+        ROS_ERROR("Asked folder does not exist.");
+        return;
       }
-
-      ROS_INFO_STREAM("Saving to default directory: " << topDirectoryPath);
-
-      // Generate the file name itself.
-      fileName = topDirectoryPath + "/" + nameOfFile;
-
-    } else {
-      const std::string topDirectoryPath{output_dir_ + "/maps"};
-
-      if (!std::filesystem::exists(topDirectoryPath)) {
-        bool success{std::filesystem::create_directory(topDirectoryPath)};
-        if (!success) {
-          ROS_ERROR("Asked folder does not exist.");
-          return;
-        }
-        // Give permission to all to read, write and execute to the new directory.
-        std::filesystem::permissions(topDirectoryPath, std::filesystem::perms::all);
-      }
-
-      ROS_INFO_STREAM("Saving to selected directory: " << topDirectoryPath);
-
-      // Generate the file name itself.
-      fileName = topDirectoryPath + "/" + nameOfFile;
+      // Give permission to all to read, write and execute to the new directory.
+      std::filesystem::permissions(topDirectoryPath, std::filesystem::perms::all);
     }
+    */
+    
+    // Generate the file name itself.
+    const std::string fileName{output_dir_ + "/" + nameOfFile};
 
     // Actual save.
     bool success = io::outputMeshLayerToPly(mapper_->mesh_layer(), fileName);
@@ -601,11 +673,12 @@ bool NvbloxNode::savePly(std_srvs::Empty::Request& /*request*/, std_srvs::Empty:
 
   ROS_INFO_STREAM("Free Memory before save : " << start_free_gpu_memory_mb);
 
-  const std::string topDirectoryPath{static_cast<std::string>(std::filesystem::current_path()) + "/maps"};
+  // Commented out since jetpack version < 5.0 does not support c++17 utilities.
+  //const std::string topDirectoryPath{static_cast<std::string>(std::filesystem::current_path()) + "/maps"};
 
   io::outputMeshLayerToPly(
     mapper_->mesh_layer(),
-    topDirectoryPath + "/manual_mesh_nvblox.ply");
+    output_dir_ + "/manual_mesh_nvblox.ply");
   ROS_INFO_STREAM("Output PLY files to " << output_dir_);
 
   mapper_->mesh_layer().clear();

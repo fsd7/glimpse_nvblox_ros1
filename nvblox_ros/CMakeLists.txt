@@ -24,10 +24,7 @@ message( STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 # DEPENDENCIES #
 ################
 
-
 list(APPEND CMAKE_INCLUDE_PATH "/usr/local/include")
-
-
 
 if(NOT WIN32)
   string(ASCII 27 Esc)
@@ -42,9 +39,7 @@ message("${Magenta}INFO: ${CMAKE_FIND_ROOT_PATH}.${ColourReset}")
 message("${Magenta}INFO: ${CMAKE_INCLUDE_PATH}.${ColourReset}")
 
 find_package (Eigen3 3.3.7 REQUIRED NO_MODULE)
-
 find_package(OpenCV REQUIRED)
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -161,6 +156,9 @@ target_include_directories(3dmatch_node SYSTEM PUBLIC
   ${catkin_INCLUDE_DIRS}
 )
 
+# 62 Should be TX2, jetson
+set_target_properties(${PROJECT_NAME}_lib PROPERTIES CUDA_ARCHITECTURES "62;72;75;86")
+
 ###########
 # INSTALL #
 ###########
@@ -184,7 +182,7 @@ install(
 
 install(
   TARGETS ${PROJECT_NAME}_lib nvblox_lib nvblox_gpu_hash nvblox_cuda_check
-  EXPORT nvbloxTargets
+  EXPORT ${PROJECT_NAME}_lib
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin

@@ -51,6 +51,15 @@ class NvbloxNode
 public:
   NvbloxNode(ros::NodeHandle& nodeHandle);
 
+  // Check saving path.
+  bool manageSaveDirectory();
+
+  // Create path recursively.
+  bool makePath(const std::string& path);
+
+  // Check whether directory exits
+  bool doesDirectoryExist(const std::string& path);
+
   // Setup the ros communication
   void setupRosCommunication();
 
