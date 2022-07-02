@@ -7,11 +7,14 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 
 cmake_minimum_required(VERSION 3.10)
+#add_compile_options(-Wall -Wextra -Wpedantic)
+set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(nvblox_ros LANGUAGES CXX CUDA)
 
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
 # Default to release build
@@ -157,7 +160,7 @@ target_include_directories(3dmatch_node SYSTEM PUBLIC
 )
 
 # 62 Should be TX2, jetson
-set_target_properties(${PROJECT_NAME}_lib PROPERTIES CUDA_ARCHITECTURES "62;72;75;86")
+set_target_properties(${PROJECT_NAME}_lib PROPERTIES CUDA_ARCHITECTURES "62;72;75;80;86;87")
 
 ###########
 # INSTALL #
