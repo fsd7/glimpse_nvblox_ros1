@@ -182,40 +182,40 @@ void NvbloxNode::setupRosCommunication(){
   depth_sub1_.subscribe(nodeHandle_, depth_image_1_topic, 20);
   depth_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_topic, 20);
 
-  depth_sub2_.subscribe(nodeHandle_, depth_image_2_topic, 20);
-  depth_camera_info_sub2_.subscribe(nodeHandle_, camera_info_2_topic, 20);
+  //depth_sub2_.subscribe(nodeHandle_, depth_image_2_topic, 20);
+  //depth_camera_info_sub2_.subscribe(nodeHandle_, camera_info_2_topic, 20);
 
-  depth_sub3_.subscribe(nodeHandle_, depth_image_3_topic, 20);
-  depth_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
+  //depth_sub3_.subscribe(nodeHandle_, depth_image_3_topic, 20);
+  //depth_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
 
   color_sub1_.subscribe(nodeHandle_, rgb_image_1_topic, 20);
   color_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_topic, 20);
 
-  color_sub2_.subscribe(nodeHandle_, rgb_image_2_topic, 20);
-  color_camera_info_sub2_.subscribe(nodeHandle_,camera_info_2_topic, 20);
+  //color_sub2_.subscribe(nodeHandle_, rgb_image_2_topic, 20);
+  //color_camera_info_sub2_.subscribe(nodeHandle_,camera_info_2_topic, 20);
 
-  color_sub3_.subscribe(nodeHandle_, rgb_image_3_topic, 20);
-  color_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
+  //color_sub3_.subscribe(nodeHandle_, rgb_image_3_topic, 20);
+  //color_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
 
   // All depth images are binded to the same callback.
   depthSync1_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), depth_sub1_, depth_camera_info_sub1_);
   depthSync1_->registerCallback(std::bind(&NvbloxNode::depthImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-  depthSync2_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), depth_sub2_, depth_camera_info_sub2_);
-  depthSync2_->registerCallback(std::bind(&NvbloxNode::depthImageCallback, this, std::placeholders::_1, std::placeholders::_2));
+  //depthSync2_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), depth_sub2_, depth_camera_info_sub2_);
+  //depthSync2_->registerCallback(std::bind(&NvbloxNode::depthImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-  depthSync3_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), depth_sub3_, depth_camera_info_sub3_);
-  depthSync3_->registerCallback(std::bind(&NvbloxNode::depthImageCallback, this, std::placeholders::_1, std::placeholders::_2));
+  //depthSync3_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), depth_sub3_, depth_camera_info_sub3_);
+  //depthSync3_->registerCallback(std::bind(&NvbloxNode::depthImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   // All rgb images are binded to the same callback.
   rgbSync1_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), color_sub1_, color_camera_info_sub1_);
   rgbSync1_->registerCallback(std::bind(&NvbloxNode::colorImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-  rgbSync2_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), color_sub2_, color_camera_info_sub2_);
-  rgbSync2_->registerCallback(std::bind(&NvbloxNode::colorImageCallback, this, std::placeholders::_1, std::placeholders::_2));
+  //rgbSync2_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), color_sub2_, color_camera_info_sub2_);
+  //rgbSync2_->registerCallback(std::bind(&NvbloxNode::colorImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-  rgbSync3_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), color_sub3_, color_camera_info_sub3_);
-  rgbSync3_->registerCallback(std::bind(&NvbloxNode::colorImageCallback, this, std::placeholders::_1, std::placeholders::_2));
+  //rgbSync3_ = std::make_unique<message_filters::Synchronizer<image_pair_sync_pol>>(image_pair_sync_pol(kQueueSize), color_sub3_, color_camera_info_sub3_);
+  //rgbSync3_->registerCallback(std::bind(&NvbloxNode::colorImageCallback, this, std::placeholders::_1, std::placeholders::_2));
 
   // Publishers of Nvblox.
   mesh_publisher_ = nodeHandle_.advertise<nvblox_msgs::Mesh>("mesh",1, true);
@@ -251,7 +251,7 @@ bool NvbloxNode::readMappingParameters(){
   success &= nodeHandle_.param<float>("esdf_integrator_max_distance_m", mapper_->esdf_integrator().max_distance_m(), 10.0f);
   success &= nodeHandle_.param<std::string>("output_dir", output_dir_, "");
   
-  return success;
+  return true;
 }
 
 bool NvbloxNode::readParameters(){
@@ -296,7 +296,7 @@ bool NvbloxNode::readParameters(){
   success &= nodeHandle_.param<int>(nodeHandle_.getNamespace() +"/max_meshing_height", maxMeshingHeight, 4);
   converter_.maxHeight_ = std::move(maxMeshingHeight);
 
-  return success;
+  return true;
 }
 
 void NvbloxNode::transformCallback(const geometry_msgs::TransformStampedConstPtr& transform_msg){
