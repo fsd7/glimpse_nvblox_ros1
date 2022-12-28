@@ -37,21 +37,21 @@ bool RosConverter::colorImageFromImageMessage(
 {
   CHECK_NOTNULL(color_image);
 
-  //sensor_msgs::ImageConstPtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "rgb8",  cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8)->image).toImageMsg();
+  sensor_msgs::ImageConstPtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "rgb8",  cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8)->image).toImageMsg();
 
   //bgrImage = cv_ptr->image;
   //if (image_msg->encoding == "bgr8"){
   //  cv::cvtColor(bgrImage, rgbImage, cv::COLOR_BGR2RGB);
   //}
   
-  if ( (image_msg->encoding != "rgb8") && (image_msg->encoding != "bgr8")) {
+  if ( (imgMsg->encoding != "rgb8") && (imgMsg->encoding != "bgr8")) {
     
     return false;
   }
 
   color_image->populateFromBuffer(
     image_msg->height, image_msg->width,
-    reinterpret_cast<const Color *>(&image_msg->data[0]), MemoryType::kDevice); // &image_msg->data[0]
+    reinterpret_cast<const Color *>(&imgMsg->data[0]), MemoryType::kDevice); // &image_msg->data[0]
 
   return true;
 }
