@@ -37,7 +37,7 @@ bool RosConverter::colorImageFromImageMessage(
 {
   CHECK_NOTNULL(color_image);
 
-  sensor_msgs::ImageConstPtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "rgb8",  cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8)->image).toImageMsg();
+  //sensor_msgs::ImageConstPtr imgMsg = cv_bridge::CvImage(std_msgs::Header(), "rgb8",  cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::RGB8)->image).toImageMsg();
 
   //bgrImage = cv_ptr->image;
   //if (image_msg->encoding == "bgr8"){
