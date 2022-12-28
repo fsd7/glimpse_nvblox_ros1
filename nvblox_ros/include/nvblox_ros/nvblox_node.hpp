@@ -192,6 +192,7 @@ private:
   std::string rgb_image_3_topic = "/alphasense_driver_ros/cam5/dropped/debayered/slow";
 
   std::string camera_info_1_topic = "/camera_utils/alphasense_cam3/cameraInfo";
+  std::string camera_info_1_depth_topic = "/camera_utils/alphasense_cam4/cameraInfo";
   std::string camera_info_2_topic = "/camera_utils/alphasense_cam4/cameraInfo";
   std::string camera_info_3_topic = "/camera_utils/alphasense_cam5/cameraInfo";
 
