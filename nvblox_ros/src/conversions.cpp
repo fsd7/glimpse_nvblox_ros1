@@ -51,7 +51,7 @@ bool RosConverter::colorImageFromImageMessage(
 
   color_image->populateFromBuffer(
     image_msg->height, image_msg->width,
-    reinterpret_cast<const Color *>(&imgMsg->data[0]), MemoryType::kDevice); // &image_msg->data[0]
+    reinterpret_cast<const Color *>(&image_msg->data[0]), MemoryType::kDevice); // &image_msg->data[0]
 
   return true;
 }
