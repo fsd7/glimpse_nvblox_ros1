@@ -189,7 +189,7 @@ void NvbloxNode::setupRosCommunication(){
   //depth_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
 
   color_sub1_.subscribe(nodeHandle_, rgb_image_1_topic, 20);
-  color_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_topic, 20);
+  color_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_depth_topic, 20);
 
   //color_sub2_.subscribe(nodeHandle_, rgb_image_2_topic, 20);
   //color_camera_info_sub2_.subscribe(nodeHandle_,camera_info_2_topic, 20);
@@ -276,6 +276,7 @@ bool NvbloxNode::readParameters(){
 
   // Camera info topics
   success &= nodeHandle_.param<std::string>("subscribers/camera_info_1_topic", camera_info_1_topic, "/camera_utils/alphasense_cam3/cameraInfo");
+  success &= nodeHandle_.param<std::string>("subscribers/camera_info_1_depth_topic", camera_info_1_depth_topic, "/camera_utils/alphasense_cam4/cameraInfo");
   success &= nodeHandle_.param<std::string>("subscribers/camera_info_2_topic", camera_info_2_topic, "/camera_utils/alphasense_cam4/cameraInfo");
   success &= nodeHandle_.param<std::string>("subscribers/camera_info_3_topic", camera_info_3_topic, "/camera_utils/alphasense_cam5/cameraInfo");
 
