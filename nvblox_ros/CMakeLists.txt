@@ -12,6 +12,9 @@ set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(nvblox_ros LANGUAGES CXX CUDA)
 
+
+
+
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
@@ -41,6 +44,8 @@ message("${Magenta}INFO: ${CMAKE_PREFIX_PATH}.${ColourReset}")
 message("${Magenta}INFO: ${CMAKE_FIND_ROOT_PATH}.${ColourReset}")
 message("${Magenta}INFO: ${CMAKE_INCLUDE_PATH}.${ColourReset}")
 
+
+find_package (Threads REQUIRED) 
 find_package (Eigen3 3.3.7 REQUIRED NO_MODULE)
 find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -119,7 +124,8 @@ add_library(${PROJECT_NAME}_lib SHARED
 target_link_libraries(${PROJECT_NAME}_lib 
   nvblox_interface
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES})
+  ${OpenCV_LIBRARIES}
+  )
 
 add_dependencies(${PROJECT_NAME}_lib
   ${catkin_EXPORTED_TARGETS})
@@ -134,7 +140,7 @@ add_executable(nvblox_node
   src/nvblox_node.cpp
 )
 
-target_link_libraries(nvblox_node ${PROJECT_NAME}_lib)
+target_link_libraries(nvblox_node ${PROJECT_NAME}_lib ${CMAKE_THREAD_LIBS_INIT})
 
 add_dependencies(nvblox_node
   ${catkin_EXPORTED_TARGETS}

@@ -11,6 +11,8 @@
 #ifndef NVBLOX_ROS__NVBLOX_NODE_HPP_
 #define NVBLOX_ROS__NVBLOX_NODE_HPP_
 
+#include <nvblox/nvblox.h>
+
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
@@ -39,6 +41,12 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <thread>
+#include <condition_variable>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
 
 #include "nvblox_ros/conversions.hpp"
 #include "nvblox_ros/transformer.hpp"
@@ -50,6 +58,8 @@ class NvbloxNode
 {
 public:
   NvbloxNode(ros::NodeHandle& nodeHandle);
+
+  virtual ~NvbloxNode();
 
   // Check saving path.
   bool manageSaveDirectory();
@@ -195,6 +205,28 @@ private:
   std::string camera_info_1_depth_topic = "/camera_utils/alphasense_cam4/cameraInfo";
   std::string camera_info_2_topic = "/camera_utils/alphasense_cam4/cameraInfo";
   std::string camera_info_3_topic = "/camera_utils/alphasense_cam5/cameraInfo";
+
+
+  // port for tcp stream
+  int mesh_port_ = 13337;
+  int socket_fd_ = -1;
+  std::mutex mesh_stream_mutex_;
+  std::condition_variable mesh_stream_cv_;
+  int mesh_stream_updated_voxels_ = 0;
+  //mesh_stream_updated_voxels_
+  std::vector<u_int8_t> mesh_stream_;
+  std::thread listen_thread_;
+  std::thread mesh_stream_thread_;
+  void listenForConnections();
+  void meshStreamThread(int newsockfd);
+  void addMeshBlockToData(const Index3D & block, std::vector<uint8_t> & data);
+  bool sendMeshUpdate(int newsockfd);
+
+  template <typename T>
+  inline void pack (std::vector< uint8_t >& dst, T& data) {
+      uint8_t * src = static_cast < uint8_t* >(static_cast < void * >(&data));
+      dst.insert (dst.end (), src, src + sizeof (T));
+  }   
 
   // Mapper
   // Holds the map layers and their associated integrators
