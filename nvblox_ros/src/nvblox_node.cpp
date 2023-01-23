@@ -137,9 +137,9 @@ bool NvbloxNode::sendMeshUpdate(int newsockfd){
   // return true if successful
   // return false if error
   // return false if connection closed
-  //std::unique_lock<std::mutex> lock(mesh_stream_mutex_);
+  std::unique_lock<std::mutex> lock(mesh_stream_mutex_);
   std::vector<u_int8_t> data(mesh_stream_);
-  //lock.unlock();
+  lock.unlock();
   auto length = data.size();
   while (length > 0) {
     int n = write(newsockfd, &data[data.size() - length], length);
@@ -182,6 +182,7 @@ void NvbloxNode::meshStreamThread(int newsockfd) {
     mesh_stream_cv_.wait(lock, [this, last_updated_voxels] {
       return mesh_stream_updated_voxels_ > last_updated_voxels;
     });
+    lock.unlock();
     ROS_ERROR_STREAM("Mesh stream update "<<mesh_stream_updated_voxels_);
     last_updated_voxels = mesh_stream_updated_voxels_;
     // Send update
