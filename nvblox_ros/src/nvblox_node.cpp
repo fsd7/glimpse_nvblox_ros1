@@ -296,10 +296,10 @@ void NvbloxNode::setupRosCommunication() {
       &NvbloxNode::memoryTimerCallback, this);
 
   // Queue size is important, since we have to wait synced messages.
-  constexpr int kQueueSize = 100;
+  constexpr int kQueueSize = 20;
 
-  depth_sub1_.subscribe(nodeHandle_, depth_image_1_topic, 150);
-  depth_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_topic, 150);
+  depth_sub1_.subscribe(nodeHandle_, depth_image_1_topic, 20);
+  depth_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_topic, 20);
 
   // depth_sub2_.subscribe(nodeHandle_, depth_image_2_topic, 20);
   // depth_camera_info_sub2_.subscribe(nodeHandle_, camera_info_2_topic, 20);
@@ -307,8 +307,8 @@ void NvbloxNode::setupRosCommunication() {
   // depth_sub3_.subscribe(nodeHandle_, depth_image_3_topic, 20);
   // depth_camera_info_sub3_.subscribe(nodeHandle_, camera_info_3_topic, 20);
 
-  color_sub1_.subscribe(nodeHandle_, rgb_image_1_topic, 150);
-  color_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_depth_topic, 150);
+  color_sub1_.subscribe(nodeHandle_, rgb_image_1_topic, 20);
+  color_camera_info_sub1_.subscribe(nodeHandle_, camera_info_1_depth_topic, 20);
 
   // color_sub2_.subscribe(nodeHandle_, rgb_image_2_topic, 20);
   // color_camera_info_sub2_.subscribe(nodeHandle_,camera_info_2_topic, 20);
@@ -529,7 +529,7 @@ void NvbloxNode::depthImageCallback(
 
   // Push it into the queue.
   depth_image_queue_.emplace_back(depth_img_ptr, camera_info_msg);
-  if (depth_image_queue_.size() > 100) {
+  if (depth_image_queue_.size() > 20) {
     // Remove the first element
     depth_image_queue_.pop_front();
   }
@@ -556,7 +556,7 @@ void NvbloxNode::colorImageCallback(
 
   // Push it into the queue.
   color_image_queue_.emplace_back(color_image_ptr, camera_info_msg);
-if (color_image_queue_.size() > 100) {
+if (color_image_queue_.size() > 20) {
     // Remove the first element
     color_image_queue_.pop_front();
 }
