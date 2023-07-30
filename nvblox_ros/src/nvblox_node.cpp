@@ -529,6 +529,11 @@ void NvbloxNode::depthImageCallback(
 
   // Push it into the queue.
   depth_image_queue_.emplace_back(depth_img_ptr, camera_info_msg);
+  if (depth_image_queue_.size() > 100) {
+    // Remove the first element
+    depth_image_queue_.pop_front();
+  }
+
   processDepthQueue();
 }
 
@@ -551,6 +556,10 @@ void NvbloxNode::colorImageCallback(
 
   // Push it into the queue.
   color_image_queue_.emplace_back(color_image_ptr, camera_info_msg);
+if (color_image_queue_.size() > 100) {
+    // Remove the first element
+    color_image_queue_.pop_front();
+}
   processColorQueue();
 }
 
@@ -631,12 +640,7 @@ void NvbloxNode::processDepthQueue() {
       it_last_valid = it;
     }
   }
-
-  // Now we have 2 iterators pointing to what we want to delete.
-  if (it_first_valid != depth_image_queue_.end()) {
-    // Actually erase from the beginning of the queue.
-    depth_image_queue_.erase(depth_image_queue_.begin(), ++it_last_valid);
-  }
+  depth_image_queue_.erase(it);
 }
 
 void NvbloxNode::processColorQueue() {
@@ -690,12 +694,7 @@ void NvbloxNode::processColorQueue() {
     if (it_last_valid <= it) {
       it_last_valid = it;
     }
-  }
-
-  // Now we have 2 iterators pointing to what we want to delete.
-  if (it_first_valid != color_image_queue_.end()) {
-    // Actually erase from the beginning of the queue.
-    color_image_queue_.erase(color_image_queue_.begin(), ++it_last_valid);
+    color_image_queue_.erase(it);
   }
 }
 
