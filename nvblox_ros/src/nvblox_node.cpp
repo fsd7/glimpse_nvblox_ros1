@@ -665,7 +665,7 @@ void NvbloxNode::processColorQueue() {
         (useHelperFrame_) ? (color_image_ptr->header.frame_id + "_helper")
                           : (color_image_ptr->header.frame_id);
     Transform T_S_C;
-
+    ROS_ERROR("color tf start");
     if (!transformer_.lookupTransformToGlobalFrame(
             target_frame, color_image_ptr->header.stamp, &T_S_C)) {
       ROS_ERROR("No tf transform available");
@@ -675,11 +675,12 @@ void NvbloxNode::processColorQueue() {
     transform_timer.Stop();
 
     timing::Timer color_convert_timer("ros/color/conversion");
-
+    ROS_ERROR("color camera msg start");
     // Convert camera info message to camera object.
     Camera camera = converter_.cameraFromMessage(*camera_info_msg);
 
     // Convert the color image.
+      ROS_ERROR("color image start");
     if (!converter_.colorImageFromImageMessage(color_image_ptr,
                                                &color_image_)) {
       ROS_ERROR("Failed to transform color image.");
