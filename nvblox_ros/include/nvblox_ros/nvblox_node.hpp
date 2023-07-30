@@ -124,7 +124,7 @@ private:
   Transformer transformer_;
 
   // Syncronization of mesages ExactTime or ApproximateTime. Since in this version only a single queue is maintained
-  typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::CameraInfo> image_pair_sync_pol;
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo> image_pair_sync_pol;
 
   // Naively initiated subscribers. TODO(ugly and inefficient, monotonize)
   std::unique_ptr<message_filters::Synchronizer<image_pair_sync_pol>> depthSync1_;
