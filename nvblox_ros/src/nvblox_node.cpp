@@ -507,19 +507,19 @@ void NvbloxNode::depthImageCallback(
   // Cache clock_now.
   ros::Time clock_now = depth_img_ptr->header.stamp;
 
-  ROS_ERROR_STREAM("Depth image received. Image stamp:" << clock_now);
+  ROS_DEBUG_STREAM("Depth image received. Image stamp:" << clock_now);
 
   if (max_tsdf_update_hz_ > 0.0f &&
       (clock_now - last_tsdf_update_time_).toSec() <
           1.0f / max_tsdf_update_hz_) {
-    ROS_ERROR_STREAM(
+    ROS_DEBUG_STREAM(
         "Skipping integrating one depth measurement due to update rate.");
     // Skip integrating this.
     return;
   }
 
   if (last_tsdf_update_time_ == clock_now) {
-    ROS_ERROR_STREAM(
+    ROS_DEBUG_STREAM(
         "Message with same timestamp arrived skipping this message.");
     // Skip integrating this.
     return;
@@ -570,7 +570,7 @@ void NvbloxNode::processDepthQueue() {
   auto it_first_valid = depth_image_queue_.end();
   auto it_last_valid = depth_image_queue_.begin();
 
-  ROS_ERROR("start it depth image.");
+
   while (++it != depth_image_queue_.end()) {
     if (! it->first) {
         return;
@@ -660,7 +660,6 @@ void NvbloxNode::processColorQueue() {
   auto it_last_valid = color_image_queue_.begin();
 
   while (++it != color_image_queue_.end()) {
-      ROS_ERROR("color it start");
     if (! it->first) {
         return;
     }
@@ -680,7 +679,6 @@ void NvbloxNode::processColorQueue() {
         (useHelperFrame_) ? (color_image_ptr->header.frame_id + "_helper")
                           : (color_image_ptr->header.frame_id);
     Transform T_S_C;
-    ROS_ERROR("color tf start");
     if (!transformer_.lookupTransformToGlobalFrame(
             target_frame, color_image_ptr->header.stamp, &T_S_C)) {
       ROS_ERROR("No tf transform available");
@@ -690,12 +688,11 @@ void NvbloxNode::processColorQueue() {
     transform_timer.Stop();
 
     timing::Timer color_convert_timer("ros/color/conversion");
-    ROS_ERROR("color camera msg start");
     // Convert camera info message to camera object.
     Camera camera = converter_.cameraFromMessage(*camera_info_msg);
 
     // Convert the color image.
-      ROS_ERROR("color image start");
+
     if (!converter_.colorImageFromImageMessage(color_image_ptr,
                                                &color_image_)) {
       ROS_ERROR("Failed to transform color image.");
@@ -706,9 +703,9 @@ void NvbloxNode::processColorQueue() {
 
     // Integrate.
     timing::Timer color_integrate_timer("ros/color/integrate");
-       ROS_ERROR("color inte");
+
     mapper_->integrateColor(color_image_, T_S_C, camera);
-       ROS_ERROR("color inte stop");
+
     color_integrate_timer.Stop();
 
     if (it_first_valid == color_image_queue_.end()) {
@@ -717,7 +714,7 @@ void NvbloxNode::processColorQueue() {
     if (it_last_valid <= it) {
       it_last_valid = it;
     }
-      ROS_ERROR("color it del");
+
     color_image_queue_.erase(it);
   }
 }
