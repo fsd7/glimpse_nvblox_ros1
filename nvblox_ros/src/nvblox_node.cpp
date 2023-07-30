@@ -570,6 +570,7 @@ void NvbloxNode::processDepthQueue() {
   auto it_first_valid = depth_image_queue_.end();
   auto it_last_valid = depth_image_queue_.begin();
 
+  ROS_ERROR("start it depth image.");
   while (++it != depth_image_queue_.end()) {
     sensor_msgs::ImageConstPtr depth_img_ptr = it->first;
     sensor_msgs::CameraInfoConstPtr camera_info_msg = it->second;
@@ -599,6 +600,7 @@ void NvbloxNode::processDepthQueue() {
     // Convert the depth image.
     if (!converter_.depthImageFromImageMessage(depth_img_ptr, &depth_image_)) {
       ROS_ERROR("Failed to transform depth image.");
+      depth_image_queue_.erase(it);
       continue;
     }
     conversions_timer.Stop();
@@ -639,8 +641,9 @@ void NvbloxNode::processDepthQueue() {
     if (it_last_valid <= it) {
       it_last_valid = it;
     }
+        depth_image_queue_.erase(it);
   }
-  depth_image_queue_.erase(it);
+
 }
 
 void NvbloxNode::processColorQueue() {
@@ -679,6 +682,7 @@ void NvbloxNode::processColorQueue() {
     if (!converter_.colorImageFromImageMessage(color_image_ptr,
                                                &color_image_)) {
       ROS_ERROR("Failed to transform color image.");
+     color_image_queue_.erase(it);
       continue;
     }
     color_convert_timer.Stop();
