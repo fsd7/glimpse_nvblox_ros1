@@ -529,7 +529,7 @@ void NvbloxNode::depthImageCallback(
 
   // Push it into the queue.
   depth_image_queue_.emplace_back(depth_img_ptr, camera_info_msg);
-  if (depth_image_queue_.size() > 20) {
+  if (depth_image_queue_.size() > 100) {
     // Remove the first element
     depth_image_queue_.pop_front();
   }
@@ -556,7 +556,7 @@ void NvbloxNode::colorImageCallback(
 
   // Push it into the queue.
   color_image_queue_.emplace_back(color_image_ptr, camera_info_msg);
-if (color_image_queue_.size() > 20) {
+if (color_image_queue_.size() > 100) {
     // Remove the first element
     color_image_queue_.pop_front();
 }
