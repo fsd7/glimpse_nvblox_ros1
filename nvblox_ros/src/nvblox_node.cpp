@@ -654,6 +654,7 @@ void NvbloxNode::processColorQueue() {
   auto it_last_valid = color_image_queue_.begin();
 
   while (++it != color_image_queue_.end()) {
+      ROS_ERROR("color it start");
     sensor_msgs::ImageConstPtr color_image_ptr = it->first;
     sensor_msgs::CameraInfoConstPtr camera_info_msg = it->second;
 
@@ -700,6 +701,7 @@ void NvbloxNode::processColorQueue() {
     if (it_last_valid <= it) {
       it_last_valid = it;
     }
+      ROS_ERROR("color it del");
     color_image_queue_.erase(it);
   }
 }
