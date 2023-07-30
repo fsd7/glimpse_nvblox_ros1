@@ -572,6 +572,12 @@ void NvbloxNode::processDepthQueue() {
 
   ROS_ERROR("start it depth image.");
   while (++it != depth_image_queue_.end()) {
+    if (! it->first) {
+        return;
+    }
+    if (!it->second) {
+        return;
+    }
     sensor_msgs::ImageConstPtr depth_img_ptr = it->first;
     sensor_msgs::CameraInfoConstPtr camera_info_msg = it->second;
 
@@ -655,8 +661,17 @@ void NvbloxNode::processColorQueue() {
 
   while (++it != color_image_queue_.end()) {
       ROS_ERROR("color it start");
+    if (! it->first) {
+        return;
+    }
+    if (!it->second) {
+        return;
+    }
+
+      
     sensor_msgs::ImageConstPtr color_image_ptr = it->first;
     sensor_msgs::CameraInfoConstPtr camera_info_msg = it->second;
+    
 
     timing::Timer transform_timer("ros/color/transform");
 
