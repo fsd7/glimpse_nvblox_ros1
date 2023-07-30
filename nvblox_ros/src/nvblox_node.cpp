@@ -281,10 +281,10 @@ bool NvbloxNode::doesDirectoryExist(const std::string& path) {
 
 void NvbloxNode::setupRosCommunication() {
   // Optional ways to provide transformations instead of TF.
-  transform_sub_ = nodeHandle_.subscribe("transform", 10,
+  transform_sub_ = nodeHandle_.subscribe("transform", 100,
                                          &NvbloxNode::transformCallback, this);
   pose_sub_ =
-      nodeHandle_.subscribe("pose", 10, &NvbloxNode::poseCallback, this);
+      nodeHandle_.subscribe("pose", 100, &NvbloxNode::poseCallback, this);
 
   // A service to save the mesh as PLY.
   save_ply_service_ =
@@ -507,19 +507,19 @@ void NvbloxNode::depthImageCallback(
   // Cache clock_now.
   ros::Time clock_now = depth_img_ptr->header.stamp;
 
-  ROS_DEBUG_STREAM("Depth image received. Image stamp:" << clock_now);
+  ROS_ERROR_STREAM("Depth image received. Image stamp:" << clock_now);
 
   if (max_tsdf_update_hz_ > 0.0f &&
       (clock_now - last_tsdf_update_time_).toSec() <
           1.0f / max_tsdf_update_hz_) {
-    ROS_DEBUG_STREAM(
+    ROS_ERROR_STREAM(
         "Skipping integrating one depth measurement due to update rate.");
     // Skip integrating this.
     return;
   }
 
   if (last_tsdf_update_time_ == clock_now) {
-    ROS_DEBUG_STREAM(
+    ROS_ERROR_STREAM(
         "Message with same timestamp arrived skipping this message.");
     // Skip integrating this.
     return;
