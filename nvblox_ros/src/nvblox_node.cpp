@@ -689,7 +689,9 @@ void NvbloxNode::processColorQueue() {
 
     // Integrate.
     timing::Timer color_integrate_timer("ros/color/integrate");
+       ROS_ERROR("color inte");
     mapper_->integrateColor(color_image_, T_S_C, camera);
+       ROS_ERROR("color inte stop");
     color_integrate_timer.Stop();
 
     if (it_first_valid == color_image_queue_.end()) {
